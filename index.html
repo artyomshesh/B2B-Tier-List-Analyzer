@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B2B Tier List Analyzer</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    .fade-in {
+      animation: fadeIn 0.4s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .drag-active {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-6 py-10">
+    <header class="mb-10">
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-purple-500 text-transparent bg-clip-text">
+        B2B Tier List Analyzer
+      </h1>
+      <p class="text-gray-300 mt-2">Высокий чек + дилерство/агентская модель</p>
+    </header>
+
+    <section class="grid gap-4 md:grid-cols-5 mb-8" id="stats">
+      <div class="bg-gray-800 rounded-xl p-4">
+        <p class="text-sm text-gray-400">Всего</p>
+        <p class="text-2xl font-semibold" id="stat-total">0</p>
+      </div>
+      <div class="bg-yellow-500/20 text-yellow-300 rounded-xl p-4">
+        <p class="text-sm">Tier S</p>
+        <p class="text-2xl font-semibold" id="stat-s">0</p>
+      </div>
+      <div class="bg-purple-500/20 text-purple-200 rounded-xl p-4">
+        <p class="text-sm">Tier A</p>
+        <p class="text-2xl font-semibold" id="stat-a">0</p>
+      </div>
+      <div class="bg-blue-500/20 text-blue-200 rounded-xl p-4">
+        <p class="text-sm">Tier B</p>
+        <p class="text-2xl font-semibold" id="stat-b">0</p>
+      </div>
+      <div class="bg-gray-700/60 text-gray-200 rounded-xl p-4">
+        <p class="text-sm">Tier C</p>
+        <p class="text-2xl font-semibold" id="stat-c">0</p>
+      </div>
+    </section>
+
+    <section class="bg-gray-800/70 rounded-2xl p-6 mb-8">
+      <div class="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">Загрузка данных</h2>
+          <p class="text-sm text-gray-400">Перетащите md файл или выберите его вручную.</p>
+        </div>
+        <label class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg cursor-pointer text-sm font-medium">
+          <input type="file" id="file-input" class="hidden" accept=".md,.txt" />
+          Выбрать файл
+        </label>
+      </div>
+      <div id="drop-zone" class="mt-4 border-2 border-dashed border-gray-600 rounded-xl p-6 text-center text-gray-400 transition">
+        Drag & Drop .md сюда
+      </div>
+
+      <div class="mt-4 hidden" id="progress-wrapper">
+        <div class="flex justify-between text-sm mb-2">
+          <span>Анализируем...</span>
+          <span id="progress-label">0%</span>
+        </div>
+        <div class="w-full bg-gray-700 rounded-full h-2">
+          <div id="progress-bar" class="bg-yellow-400 h-2 rounded-full" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="mt-4 bg-gray-900/70 rounded-xl p-4 text-sm text-gray-300" id="debug-panel">
+        <h3 class="text-base font-semibold mb-2">Дебаг-панель (поля)</h3>
+        <p class="text-gray-400">Поля ещё не определены.</p>
+      </div>
+    </section>
+
+    <section class="bg-gray-800/70 rounded-2xl p-6 mb-8">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-wrap gap-2" id="tier-filters">
+          <button data-tier="ALL" class="tier-btn px-4 py-2 rounded-lg bg-yellow-500/20 text-yellow-200">Все</button>
+          <button data-tier="S" class="tier-btn px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">S</button>
+          <button data-tier="A" class="tier-btn px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">A</button>
+          <button data-tier="B" class="tier-btn px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">B</button>
+          <button data-tier="C" class="tier-btn px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">C</button>
+        </div>
+
+        <div class="flex flex-wrap gap-2 items-center">
+          <div class="flex bg-gray-700 rounded-lg overflow-hidden">
+            <button data-cols="1" class="col-btn px-3 py-2 text-sm">1</button>
+            <button data-cols="2" class="col-btn px-3 py-2 text-sm bg-gray-600">2</button>
+            <button data-cols="3" class="col-btn px-3 py-2 text-sm">3</button>
+          </div>
+          <button id="toggle-groups" class="px-3 py-2 bg-gray-700 rounded-lg text-sm">📂 Все</button>
+          <input type="text" id="search-input" placeholder="Поиск..." class="px-3 py-2 bg-gray-700 rounded-lg text-sm text-gray-100 placeholder-gray-400" />
+          <button id="export-csv" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm">Экспорт CSV</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="results" class="space-y-6"></section>
+  </div>
+
+  <div id="modal" class="fixed inset-0 bg-black/70 items-center justify-center hidden">
+    <div class="bg-gray-900 text-gray-100 rounded-2xl max-w-3xl w-full p-6 relative" id="modal-content">
+      <button id="modal-close" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      records: [],
+      filteredRecords: [],
+      tierFilter: 'ALL',
+      columns: 2,
+      collapsedGroups: new Set(),
+      allCollapsed: false,
+      search: ''
+    };
+
+    const fieldVariants = {
+      company: ['company name', 'company', 'name', 'название', 'компания', 'организация', 'название компании', 'firm', 'brand'],
+      description: ['description', 'desc', 'about', 'info', 'описание', 'о компании', 'комментарий', 'detail', 'details'],
+      city: ['city', 'город', 'town', 'населенный пункт'],
+      region: ['region', 'регион', 'область', 'край', 'республика'],
+      website: ['website', 'site', 'web', 'url', 'сайт', 'ссылка']
+    };
+
+    const keywords = {
+      highTicket4: ['станок', 'станки', 'оборудован', 'промышленн', 'линия', 'конвейер', 'пресс', 'токарн', 'фрезер', 'шлифовальн', 'сварочн', 'лазер', 'плазм', 'чпу', 'cnc', 'компрессор', 'насос', 'редуктор', 'электродвигател', 'генератор', 'трансформатор'],
+      highTicket4b: ['металлоконструкц', 'металлоиздел', 'ангар', 'модульн', 'блок-контейнер', 'бытовк', 'павильон', 'вагон-дом', 'кпп', 'быстровозвод', 'сэндвич-панел'],
+      highTicket4c: ['грузоподъём', 'кран', 'лебёдк', 'таль', 'подъёмник', 'эстакад', 'резервуар', 'ёмкост', 'цистерн', 'силос', 'бункер'],
+      highTicket3a: ['вентиляц', 'вентилятор', 'дымоудален', 'дымосос', 'циклон', 'аспирац', 'воздуховод', 'кондиционир', 'климат', 'фильтр'],
+      highTicket3b: ['котел', 'котельн', 'теплогенератор', 'теплообменник', 'отопител', 'парогенератор', 'бойлер'],
+      highTicket3c: ['прицеп', 'полуприцеп', 'навесное', 'сельхоз', 'агро', 'трактор', 'комбайн', 'погрузчик', 'экскаватор', 'спецтехник'],
+      highTicket2a: ['жби', 'железобетон', 'бетон', 'кирпич', 'плитк', 'керамогранит', 'пиломатериал', 'доск', 'брус', 'фанер', 'арматур', 'металлопрокат'],
+      highTicket2b: ['мебель', 'шкаф', 'стеллаж', 'верстак', 'витрин'],
+      highTicket2c: ['хими', 'лакокрасочн', 'краск', 'грунт', 'клей', 'герметик'],
+      highTicket1: ['текстиль', 'ткан', 'одежд', 'спецодежд', 'упаковк', 'тар', 'пакет'],
+      production: ['завод', 'фабрик', 'производств', 'производим', 'производител', 'изготовлен', 'изготавлива', 'выпуск', 'собственное производство', 'цех', 'предприят', 'комбинат'],
+      b2bMarkers: ['для предприятий', 'для заводов', 'для производств', 'для цехов', 'промышленн', 'индустриальн', 'под заказ', 'комплектац', 'инжиниринг', 'под ключ', 'оптов', 'корпоративн', 'госзаказ', 'тендер', 'b2b'],
+      uniqueness: ['нестандарт', 'уникальн', 'специализир', 'эксклюзив', 'индивидуальн', 'по чертеж', 'по проект', 'разработк', 'конструирован'],
+      servicesPenalty: ['услуг', 'сервис', 'ремонт', 'монтаж', 'реклам', 'маркетинг', 'seo', 'smm', 'типограф', 'полиграф', 'консалтинг', 'бухгалтер', 'юрид'],
+      tradePenalty: ['магазин', 'розниц', 'торговл', 'дистрибьют', 'импорт', 'экспорт'],
+      foodPenalty: ['пекарн', 'хлеб', 'кондитер', 'молоч', 'мясн', 'колбас', 'ресторан', 'кафе', 'напиток', 'алкоголь'],
+      b2cMarkers: ['для дома', 'для дачи', 'домашн', 'бытов', 'розниц', 'интернет-магазин', 'для себя', 'подарок', 'декор', 'детск', 'игрушк']
+    };
+
+    const classMap = [
+      { key: 'станки/оборудование', icon: '⚙️', words: [...keywords.highTicket4] },
+      { key: 'металлоконструкции/модульные', icon: '🏗️', words: [...keywords.highTicket4b] },
+      { key: 'спецоборудование', icon: '🔧', words: [...keywords.highTicket4c] },
+      { key: 'вентиляция/климат', icon: '🌀', words: [...keywords.highTicket3a] },
+      { key: 'котельное/отопление', icon: '🔥', words: [...keywords.highTicket3b] },
+      { key: 'агротехника/спецтехника', icon: '🚜', words: [...keywords.highTicket3c] },
+      { key: 'стройматериалы', icon: '🧱', words: [...keywords.highTicket2a] },
+      { key: 'мебель/торговое оборудование', icon: '🪑', words: [...keywords.highTicket2b] },
+      { key: 'химия/ЛКМ', icon: '🧪', words: [...keywords.highTicket2c] },
+      { key: 'текстиль/упаковка', icon: '📦', words: [...keywords.highTicket1] },
+      { key: 'услуги', icon: '🛠️', words: [...keywords.servicesPenalty] },
+      { key: 'торговля/перепродажа', icon: '🛒', words: [...keywords.tradePenalty] },
+      { key: 'пищевое производство', icon: '🍞', words: [...keywords.foodPenalty] }
+    ];
+
+    const tierStyles = {
+      S: 'bg-gradient-to-r from-[#ffd700] to-[#ffed4a] text-gray-900',
+      A: 'bg-gradient-to-r from-[#a855f7] to-[#c084fc] text-white',
+      B: 'bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] text-white',
+      C: 'bg-gradient-to-r from-[#6b7280] to-[#9ca3af] text-white'
+    };
+
+    const b2bColors = {
+      'B2B': 'text-blue-400',
+      'B2C': 'text-green-400',
+      'B2B + B2C': 'text-purple-400'
+    };
+
+    const confidenceColors = {
+      High: 'bg-green-500/20 text-green-200',
+      Medium: 'bg-yellow-500/20 text-yellow-200',
+      Low: 'bg-red-500/20 text-red-200'
+    };
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function normalizeHeader(value) {
+      return String(value || '')
+        .toLowerCase()
+        .replace(/[_\-]/g, ' ')
+        .replace(/[^\p{L}\p{N}\s]/gu, '')
+        .trim();
+    }
+
+    function detectField(headers, variants) {
+      const normalized = headers.map((header) => normalizeHeader(header));
+      for (const variant of variants) {
+        const target = normalizeHeader(variant);
+        const index = normalized.findIndex((header) => header === target || header.includes(target));
+        if (index !== -1) {
+          return headers[index];
+        }
+      }
+      return null;
+    }
+
+    function splitRow(line) {
+      return line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(cell => cell.trim());
+    }
+
+    function parseMarkdownTable(text) {
+      const lines = text.split(/\r?\n/);
+      for (let i = 0; i < lines.length - 1; i += 1) {
+        const line = lines[i];
+        const next = lines[i + 1];
+        if (line.includes('|') && /^\s*\|?\s*:?[-]+:?\s*(\|\s*:?[-]+:?\s*)+\|?\s*$/.test(next)) {
+          const headers = splitRow(line);
+          const rows = [];
+          for (let j = i + 2; j < lines.length; j += 1) {
+            if (!lines[j].includes('|')) break;
+            const cells = splitRow(lines[j]);
+            if (cells.length === headers.length && cells.join('').trim()) {
+              const row = {};
+              headers.forEach((header, idx) => {
+                row[header] = cells[idx];
+              });
+              rows.push(row);
+            }
+          }
+          return { headers, rows };
+        }
+      }
+      return null;
+    }
+
+    function parseKeyValueBlocks(text) {
+      const blocks = text.split(/\n\s*\n/).map(block => block.trim()).filter(Boolean);
+      const rows = [];
+      blocks.forEach((block) => {
+        const row = {};
+        block.split(/\n/).forEach((line) => {
+          const match = line.match(/^\s*([^:]+)\s*:\s*(.+)$/);
+          if (match) {
+            row[match[1].trim()] = match[2].trim();
+          }
+        });
+        if (Object.keys(row).length) {
+          rows.push(row);
+        }
+      });
+      return rows.length ? rows : null;
+    }
+
+    function findFieldMapping(headers) {
+      return {
+        company: detectField(headers, fieldVariants.company),
+        description: detectField(headers, fieldVariants.description),
+        city: detectField(headers, fieldVariants.city),
+        region: detectField(headers, fieldVariants.region),
+        website: detectField(headers, fieldVariants.website)
+      };
+    }
+
+    function findKeywords(text, list) {
+      return list.filter((word) => text.includes(word));
+    }
+
+    function computeHighTicket(text) {
+      const hits4 = [
+        ...findKeywords(text, keywords.highTicket4),
+        ...findKeywords(text, keywords.highTicket4b),
+        ...findKeywords(text, keywords.highTicket4c)
+      ];
+      if (hits4.length) return { score: 4, hits: hits4 };
+      const hits3 = [
+        ...findKeywords(text, keywords.highTicket3a),
+        ...findKeywords(text, keywords.highTicket3b),
+        ...findKeywords(text, keywords.highTicket3c)
+      ];
+      if (hits3.length) return { score: 3, hits: hits3 };
+      const hits2 = [
+        ...findKeywords(text, keywords.highTicket2a),
+        ...findKeywords(text, keywords.highTicket2b),
+        ...findKeywords(text, keywords.highTicket2c)
+      ];
+      if (hits2.length) return { score: 2, hits: hits2 };
+      const hits1 = findKeywords(text, keywords.highTicket1);
+      if (hits1.length) return { score: 1, hits: hits1 };
+      return { score: 0, hits: [] };
+    }
+
+    function computeClass(text) {
+      if (!text.trim()) return { label: 'недостаточно данных', icon: '❓' };
+      if (findKeywords(text, keywords.foodPenalty).length) {
+        return { label: 'пищевое производство', icon: '🍞' };
+      }
+      if (findKeywords(text, keywords.servicesPenalty).length) {
+        return { label: 'услуги', icon: '🛠️' };
+      }
+      if (findKeywords(text, keywords.tradePenalty).length) {
+        return { label: 'торговля/перепродажа', icon: '🛒' };
+      }
+      for (const item of classMap) {
+        if (findKeywords(text, item.words).length) {
+          return { label: item.key, icon: item.icon };
+        }
+      }
+      return { label: 'недостаточно данных', icon: '❓' };
+    }
+
+    function computeB2BType(text, highTicketScore, hasProduction) {
+      const b2bHits = findKeywords(text, keywords.b2bMarkers).length > 0;
+      const b2cHits = findKeywords(text, keywords.b2cMarkers).length > 0;
+      if (b2bHits && !b2cHits) return 'B2B';
+      if (b2cHits && !b2bHits) return 'B2C';
+      if (highTicketScore >= 3 || hasProduction) return 'B2B';
+      return 'B2B + B2C';
+    }
+
+    function computeConfidence(text, keywordHits) {
+      const descLength = text.trim().length;
+      if (descLength < 10) return 'Low';
+      if (keywordHits.length >= 4 && descLength > 50) return 'High';
+      return 'Medium';
+    }
+
+    function tierFromScore(score) {
+      if (score >= 8) return 'S';
+      if (score >= 6) return 'A';
+      if (score >= 3) return 'B';
+      return 'C';
+    }
+
+    function downgradeTier(tier) {
+      if (tier === 'S') return 'A';
+      if (tier === 'A') return 'B';
+      if (tier === 'B') return 'C';
+      return 'C';
+    }
+
+    function buildWhyTier(tier, data) {
+      const keywordText = data.KEYWORDS_HIT.slice(0, 6).join(', ') || 'нет';
+      if (tier === 'S') {
+        return `🏆 Высокий чек (${data.CLASS}). Признаки производства B2B. Ключевые: ${keywordText}. Идеально для дилерской модели.`;
+      }
+      if (tier === 'A') {
+        return `🥈 Хороший потенциал (${data.CLASS}). Ключевые: ${keywordText}. Возможна дилерская модель.`;
+      }
+      if (tier === 'B') {
+        if (data.SCORE_BREAKDOWN.penalties > 0) {
+          return `🥉 Штрафы за: услуги/торговля/пища (-${data.SCORE_BREAKDOWN.penalties}). Класс: ${data.CLASS}. Не основной фокус.`;
+        }
+        return `🥉 Низкий/средний чек (${data.CLASS}). Не основной фокус стратегии.`;
+      }
+      if (data.Description.trim().length < 20) {
+        return '🗑 Недостаточно информации для анализа (описание < 20 символов).';
+      }
+      return `🗑 Не подходит: ${data.CLASS}. Штрафы: ${data.SCORE_BREAKDOWN.penalties}. Услуги/торговля/пища.`;
+    }
+
+    function analyzeRecord(record, mapping) {
+      const name = record[mapping.company] || record['Company Name'] || '';
+      const description = record[mapping.description] || record['Description'] || '';
+      const city = record[mapping.city] || record['City'] || '';
+      const region = record[mapping.region] || record['Region'] || '';
+      const website = record[mapping.website] || record['Website'] || '';
+      const combinedText = `${name} ${description}`.toLowerCase();
+
+      const highTicket = computeHighTicket(combinedText);
+      const productionHits = findKeywords(combinedText, keywords.production);
+      const b2bHits = findKeywords(combinedText, keywords.b2bMarkers);
+      const uniquenessHits = findKeywords(combinedText, keywords.uniqueness);
+      const servicePenaltyHits = findKeywords(combinedText, keywords.servicesPenalty);
+      const tradePenaltyHits = findKeywords(combinedText, keywords.tradePenalty);
+      const foodPenaltyHits = findKeywords(combinedText, keywords.foodPenalty);
+
+      const b2bFit = productionHits.length ? 3 : (b2bHits.length ? 2 : 1);
+      const uniqueness = uniquenessHits.length ? 2 : ((productionHits.length && highTicket.score >= 3) ? 1 : 0);
+      const logistics = foodPenaltyHits.length ? 0 : 1;
+      const penalties = (servicePenaltyHits.length ? 4 : 0) + (tradePenaltyHits.length ? 3 : 0) + (foodPenaltyHits.length ? 4 : 0);
+      const bonuses = (productionHits.length && highTicket.score >= 3 ? 2 : 0) + (b2bHits.length && uniquenessHits.length ? 1 : 0);
+
+      let score = highTicket.score + b2bFit + uniqueness + logistics + bonuses - penalties;
+      score = Math.max(0, Math.min(10, score));
+
+      let tier = tierFromScore(score);
+      const confidence = computeConfidence(description, [
+        ...highTicket.hits,
+        ...productionHits,
+        ...b2bHits,
+        ...uniquenessHits
+      ]);
+      if (confidence === 'Low') {
+        tier = downgradeTier(tier);
+      }
+
+      const classData = computeClass(combinedText);
+      const keywordHits = Array.from(new Set([
+        ...highTicket.hits,
+        ...productionHits,
+        ...b2bHits,
+        ...uniquenessHits,
+        ...servicePenaltyHits,
+        ...tradePenaltyHits,
+        ...foodPenaltyHits
+      ]));
+
+      const result = {
+        'Company Name': name || 'Без названия',
+        City: city,
+        Region: region,
+        Website: website,
+        Description: description,
+        TIER: tier,
+        SCORE: score,
+        CLASS: classData.label,
+        B2B_TYPE: computeB2BType(combinedText, highTicket.score, productionHits.length > 0),
+        WHY_TIER: '',
+        KEYWORDS_HIT: keywordHits,
+        CONFIDENCE: confidence,
+        SCORE_BREAKDOWN: {
+          highTicket: highTicket.score,
+          b2bFit,
+          uniqueness,
+          logistics,
+          bonuses,
+          penalties
+        },
+        CLASS_ICON: classData.icon
+      };
+      result.WHY_TIER = buildWhyTier(tier, result);
+      return result;
+    }
+
+    function updateStats(records) {
+      document.getElementById('stat-total').textContent = records.length;
+      document.getElementById('stat-s').textContent = records.filter(r => r.TIER === 'S').length;
+      document.getElementById('stat-a').textContent = records.filter(r => r.TIER === 'A').length;
+      document.getElementById('stat-b').textContent = records.filter(r => r.TIER === 'B').length;
+      document.getElementById('stat-c').textContent = records.filter(r => r.TIER === 'C').length;
+    }
+
+    function renderResults() {
+      const container = document.getElementById('results');
+      container.innerHTML = '';
+      const grouped = groupRecords(state.filteredRecords);
+
+      Object.entries(grouped).forEach(([tier, b2bGroups]) => {
+        const tierWrapper = document.createElement('div');
+        tierWrapper.className = 'space-y-4 fade-in';
+
+        const tierHeader = document.createElement('div');
+        tierHeader.className = `px-4 py-2 rounded-xl font-semibold ${tierStyles[tier]}`;
+        tierHeader.textContent = `🏆 Tier ${tier}`;
+        tierWrapper.appendChild(tierHeader);
+
+        Object.entries(b2bGroups).forEach(([b2bType, classGroups]) => {
+          const b2bKey = `${tier}|${b2bType}`;
+          const b2bHeader = document.createElement('button');
+          b2bHeader.className = `flex items-center justify-between w-full bg-gray-800/80 px-4 py-3 rounded-xl text-left`;
+          const count = classGroups.__count || 0;
+          b2bHeader.innerHTML = `
+            <span class="font-semibold ${b2bColors[b2bType] || ''}">${b2bType} (${count})</span>
+            <span>${state.collapsedGroups.has(b2bKey) ? '▶' : '▼'}</span>
+          `;
+          b2bHeader.addEventListener('click', () => {
+            toggleGroup(b2bKey);
+          });
+          tierWrapper.appendChild(b2bHeader);
+
+          if (!state.collapsedGroups.has(b2bKey)) {
+            Object.entries(classGroups).forEach(([className, items]) => {
+              if (className === '__count') return;
+              const classKey = `${tier}|${b2bType}|${className}`;
+              const classHeader = document.createElement('button');
+              classHeader.className = 'flex items-center justify-between w-full bg-gray-800/60 px-4 py-2 rounded-xl text-left ml-4';
+              classHeader.innerHTML = `
+                <span>${items.icon || '❓'} ${className} (${items.records.length})</span>
+                <span>${state.collapsedGroups.has(classKey) ? '▶' : '▼'}</span>
+              `;
+              classHeader.addEventListener('click', () => {
+                toggleGroup(classKey);
+              });
+              tierWrapper.appendChild(classHeader);
+
+              if (!state.collapsedGroups.has(classKey)) {
+                const grid = document.createElement('div');
+                grid.className = `grid gap-4 ml-4 ${state.columns === 1 ? 'grid-cols-1' : state.columns === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`;
+                items.records.forEach((record) => {
+                  grid.appendChild(renderCard(record));
+                });
+                tierWrapper.appendChild(grid);
+              }
+            });
+          }
+        });
+
+        container.appendChild(tierWrapper);
+      });
+    }
+
+    function renderCard(record) {
+      const card = document.createElement('div');
+      card.className = 'bg-gray-800/80 rounded-xl p-4 shadow-lg hover:-translate-y-1 hover:shadow-xl transition cursor-pointer flex flex-col gap-2';
+      const nameLine = state.columns === 1 ? escapeHtml(record['Company Name']) : truncateText(record['Company Name'], 32);
+      const descLines = state.columns === 1 ? 3 : 2;
+      card.innerHTML = `
+        <div class="flex items-center justify-between">
+          <h3 class="font-semibold">${nameLine}</h3>
+          <span class="text-sm font-semibold">${record.SCORE}/10</span>
+        </div>
+        <p class="text-sm text-gray-300 line-clamp-${descLines}">${escapeHtml(record.Description)}</p>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <span class="px-2 py-1 bg-gray-700 rounded">${record.CLASS}</span>
+          <span class="px-2 py-1 bg-gray-700 rounded ${b2bColors[record.B2B_TYPE]}">${record.B2B_TYPE}</span>
+          <span class="px-2 py-1 bg-gray-700 rounded">${record.CONFIDENCE}</span>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs text-gray-400">
+          ${record.KEYWORDS_HIT.slice(0, 4).map((keyword) => `<span class="bg-gray-700/70 px-2 py-1 rounded">${escapeHtml(keyword)}</span>`).join('')}
+          ${record.KEYWORDS_HIT.length > 4 ? `<span class="text-gray-400">+${record.KEYWORDS_HIT.length - 4}</span>` : ''}
+        </div>
+        <div class="text-xs text-gray-400">📍 ${escapeHtml([record.City, record.Region].filter(Boolean).join(', ')) || '—'}</div>
+      `;
+      card.addEventListener('click', () => openModal(record));
+      return card;
+    }
+
+    function openModal(record) {
+      const modal = document.getElementById('modal');
+      const body = document.getElementById('modal-body');
+      body.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <span class="px-3 py-1 rounded-full text-sm ${tierStyles[record.TIER]}">Tier ${record.TIER}</span>
+            <span class="ml-2 text-sm font-semibold">${record.SCORE}/10</span>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs ${confidenceColors[record.CONFIDENCE]}">${record.CONFIDENCE}</span>
+        </div>
+        <h3 class="text-xl font-semibold">${escapeHtml(record['Company Name'])}</h3>
+        <p class="text-sm text-gray-400">${escapeHtml([record.City, record.Region].filter(Boolean).join(', '))}</p>
+        <p class="mt-4 text-gray-200">${escapeHtml(record.Description)}</p>
+        <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div class="bg-gray-800 rounded-lg p-3">High Ticket: ${record.SCORE_BREAKDOWN.highTicket}</div>
+          <div class="bg-gray-800 rounded-lg p-3">B2B-fit: ${record.SCORE_BREAKDOWN.b2bFit}</div>
+          <div class="bg-gray-800 rounded-lg p-3">Уникальность: ${record.SCORE_BREAKDOWN.uniqueness}</div>
+          <div class="bg-gray-800 rounded-lg p-3">Логистика: ${record.SCORE_BREAKDOWN.logistics}</div>
+          <div class="bg-gray-800 rounded-lg p-3">Бонусы: ${record.SCORE_BREAKDOWN.bonuses}</div>
+          <div class="bg-gray-800 rounded-lg p-3">Штрафы: ${record.SCORE_BREAKDOWN.penalties}</div>
+        </div>
+        <div class="mt-4 text-sm">
+          <p><span class="font-semibold">Класс:</span> ${record.CLASS}</p>
+          <p><span class="font-semibold">Тип:</span> <span class="${b2bColors[record.B2B_TYPE]}">${record.B2B_TYPE}</span></p>
+          <p><span class="font-semibold">WHY_TIER:</span> ${escapeHtml(record.WHY_TIER)}</p>
+        </div>
+        <div class="mt-4">
+          <h4 class="font-semibold">Ключевые слова</h4>
+          <div class="flex flex-wrap gap-2 mt-2">
+            ${record.KEYWORDS_HIT.map(keyword => `<span class="px-2 py-1 bg-gray-700 rounded text-xs">${escapeHtml(keyword)}</span>`).join('')}
+          </div>
+        </div>
+        ${record.Website ? `<a href="${escapeHtml(record.Website)}" target="_blank" class="inline-block mt-4 text-blue-400 hover:text-blue-300">Открыть сайт</a>` : ''}
+      `;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function truncateText(text, max) {
+      if (!text) return '';
+      return text.length > max ? `${text.slice(0, max)}...` : text;
+    }
+
+    function groupRecords(records) {
+      const grouped = {};
+      records.forEach((record) => {
+        const tier = record.TIER;
+        const b2bType = record.B2B_TYPE;
+        const className = record.CLASS;
+        if (!grouped[tier]) grouped[tier] = {};
+        if (!grouped[tier][b2bType]) grouped[tier][b2bType] = { __count: 0 };
+        if (!grouped[tier][b2bType][className]) {
+          grouped[tier][b2bType][className] = { records: [], icon: record.CLASS_ICON };
+        }
+        grouped[tier][b2bType][className].records.push(record);
+        grouped[tier][b2bType].__count += 1;
+      });
+      return grouped;
+    }
+
+    function updateFilters() {
+      const tierButtons = document.querySelectorAll('.tier-btn');
+      tierButtons.forEach((button) => {
+        const tier = button.dataset.tier;
+        if (tier === state.tierFilter) {
+          button.classList.add('bg-yellow-500/20', 'text-yellow-200');
+          button.classList.remove('bg-gray-700');
+        } else {
+          button.classList.remove('bg-yellow-500/20', 'text-yellow-200');
+          button.classList.add('bg-gray-700');
+        }
+      });
+
+      const colButtons = document.querySelectorAll('.col-btn');
+      colButtons.forEach((button) => {
+        if (Number(button.dataset.cols) === state.columns) {
+          button.classList.add('bg-gray-600');
+        } else {
+          button.classList.remove('bg-gray-600');
+        }
+      });
+    }
+
+    function applyFilters() {
+      let records = [...state.records];
+      if (state.tierFilter !== 'ALL') {
+        records = records.filter(record => record.TIER === state.tierFilter);
+      }
+      if (state.search.trim()) {
+        const query = state.search.toLowerCase();
+        records = records.filter(record =>
+          record['Company Name'].toLowerCase().includes(query) ||
+          record.Description.toLowerCase().includes(query)
+        );
+      }
+      state.filteredRecords = records;
+      updateStats(records);
+      renderResults();
+    }
+
+    function toggleGroup(key) {
+      if (state.collapsedGroups.has(key)) {
+        state.collapsedGroups.delete(key);
+      } else {
+        state.collapsedGroups.add(key);
+      }
+      renderResults();
+    }
+
+    function toggleAllGroups() {
+      state.allCollapsed = !state.allCollapsed;
+      state.collapsedGroups.clear();
+      if (state.allCollapsed) {
+        const groups = [];
+        state.filteredRecords.forEach((record) => {
+          groups.push(`${record.TIER}|${record.B2B_TYPE}`);
+          groups.push(`${record.TIER}|${record.B2B_TYPE}|${record.CLASS}`);
+        });
+        groups.forEach((key) => state.collapsedGroups.add(key));
+      }
+      document.getElementById('toggle-groups').textContent = state.allCollapsed ? '📁 Скрыть' : '📂 Все';
+      renderResults();
+    }
+
+    function updateDebugPanel(mapping, count) {
+      const panel = document.getElementById('debug-panel');
+      panel.innerHTML = `
+        <h3 class="text-base font-semibold mb-2">Дебаг-панель (поля)</h3>
+        <ul class="space-y-1 text-sm">
+          <li>Company Name: <span class="text-yellow-300">${escapeHtml(mapping.company || 'не найдено')}</span></li>
+          <li>Description: <span class="text-yellow-300">${escapeHtml(mapping.description || 'не найдено')}</span></li>
+          <li>City: <span class="text-yellow-300">${escapeHtml(mapping.city || 'не найдено')}</span></li>
+          <li>Region: <span class="text-yellow-300">${escapeHtml(mapping.region || 'не найдено')}</span></li>
+          <li>Website: <span class="text-yellow-300">${escapeHtml(mapping.website || 'не найдено')}</span></li>
+          <li>Всего записей: <span class="text-yellow-300">${count}</span></li>
+        </ul>
+      `;
+    }
+
+    function processRecords(rows, mapping) {
+      const progressWrapper = document.getElementById('progress-wrapper');
+      const progressBar = document.getElementById('progress-bar');
+      const progressLabel = document.getElementById('progress-label');
+      progressWrapper.classList.remove('hidden');
+
+      state.records = [];
+      const chunkSize = 50;
+      let index = 0;
+
+      function processChunk() {
+        const chunk = rows.slice(index, index + chunkSize);
+        chunk.forEach((row) => {
+          state.records.push(analyzeRecord(row, mapping));
+        });
+        index += chunkSize;
+        const progress = Math.min(100, Math.round((index / rows.length) * 100));
+        progressBar.style.width = `${progress}%`;
+        progressLabel.textContent = `${progress}%`;
+
+        if (index < rows.length) {
+          setTimeout(processChunk, 30);
+        } else {
+          progressWrapper.classList.add('hidden');
+          applyFilters();
+        }
+      }
+
+      processChunk();
+    }
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = reader.result;
+        const table = parseMarkdownTable(text);
+        let rows = [];
+        let headers = [];
+
+        if (table) {
+          rows = table.rows;
+          headers = table.headers;
+        } else {
+          const fallbackRows = parseKeyValueBlocks(text);
+          if (fallbackRows) {
+            rows = fallbackRows;
+            headers = Object.keys(fallbackRows[0]);
+          }
+        }
+
+        if (!rows.length) {
+          updateDebugPanel({ company: null, description: null, city: null, region: null, website: null }, 0);
+          return;
+        }
+
+        const mapping = findFieldMapping(headers);
+        updateDebugPanel(mapping, rows.length);
+        processRecords(rows, mapping);
+      };
+      reader.readAsText(file, 'utf-8');
+    }
+
+    document.getElementById('file-input').addEventListener('change', (event) => {
+      if (event.target.files.length) {
+        handleFile(event.target.files[0]);
+      }
+    });
+
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      dropZone.classList.add('drag-active');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-active');
+    });
+    dropZone.addEventListener('drop', (event) => {
+      event.preventDefault();
+      dropZone.classList.remove('drag-active');
+      const file = event.dataTransfer.files[0];
+      if (file) {
+        handleFile(file);
+      }
+    });
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal').addEventListener('click', (event) => {
+      if (event.target.id === 'modal') closeModal();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeModal();
+    });
+
+    document.getElementById('tier-filters').addEventListener('click', (event) => {
+      const button = event.target.closest('.tier-btn');
+      if (!button) return;
+      state.tierFilter = button.dataset.tier;
+      updateFilters();
+      applyFilters();
+    });
+
+    document.querySelectorAll('.col-btn').forEach((button) => {
+      button.addEventListener('click', () => {
+        state.columns = Number(button.dataset.cols);
+        updateFilters();
+        renderResults();
+      });
+    });
+
+    document.getElementById('toggle-groups').addEventListener('click', () => {
+      toggleAllGroups();
+    });
+
+    document.getElementById('search-input').addEventListener('input', (event) => {
+      state.search = event.target.value;
+      applyFilters();
+    });
+
+    document.getElementById('export-csv').addEventListener('click', () => {
+      if (!state.filteredRecords.length) return;
+      const headers = ['Company Name', 'City', 'Region', 'Description', 'TIER', 'SCORE', 'CLASS', 'B2B_TYPE', 'WHY_TIER', 'KEYWORDS_HIT', 'CONFIDENCE'];
+      const rows = state.filteredRecords.map((record) => [
+        record['Company Name'],
+        record.City,
+        record.Region,
+        record.Description,
+        record.TIER,
+        record.SCORE,
+        record.CLASS,
+        record.B2B_TYPE,
+        record.WHY_TIER,
+        record.KEYWORDS_HIT.join(', '),
+        record.CONFIDENCE
+      ]);
+      const csvContent = [headers, ...rows]
+        .map((row) => row.map((value) => `"${String(value || '').replace(/"/g, '""')}"`).join(';'))
+        .join('\n');
+      const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'tier-list.csv';
+      link.click();
+    });
+
+    updateFilters();
+  </script>
+</body>
+</html>
